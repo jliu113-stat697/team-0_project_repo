@@ -70,6 +70,10 @@ proc report data=cde_analytic_file_by_FRPM_Incr(obs=5);
         FRPM_Percentage_Point_Increase
     ;
 run;
+	
+* clear titles/footnotes;
+title;
+footnote;
 
 
 *******************************************************************************;
@@ -124,6 +128,10 @@ proc corr
         not(missing(Percent_with_SAT_above_1500))
     ;
 run;
+	
+* clear titles/footnotes;
+title;
+footnote;
 
 
 title1
@@ -140,6 +148,10 @@ proc sgplot data=cde_analytic_file;
         y=Percent_with_SAT_above_1500
     ;
 run;
+	
+* clear titles/footnotes;
+title;
+footnote;
 
 
 *******************************************************************************;
@@ -202,3 +214,7 @@ proc report data=cde_analytic_file_by_Gap_Count(obs=10);
         Course_Completers_Gap_Count
     ;
 run;
+	
+* clear titles/footnotes;
+title;
+footnote;

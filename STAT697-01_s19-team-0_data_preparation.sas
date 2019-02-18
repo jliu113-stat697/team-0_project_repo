@@ -271,15 +271,6 @@ proc sql;
        non-schools; after executing this query, we see that
        gradaf15_raw_bad_unique_ids only has non-school values of CDS_Code that
        need to be removed */
-    /* note to learners: the query below uses an in-line view together with a
-       left join (see Chapter 3 for definitions) to isolate all problematic
-       rows within a single query; it would have been just as valid to use
-       mulitple queries, as above, but it's often convenient to use a single
-       query to create a table with speficic properties; in particular, in the
-       above two examples, we blindly eliminated rows having specific
-       properties when creating frpm1415 and frpm1516, whereas the query below
-       allows us to build a fit-for-purpose mitigation step with no guessing
-       or unnecessary effort */
     create table gradaf15_raw_bad_unique_ids as
         select
             A.*
@@ -373,159 +364,6 @@ proc sql;
 	    substr(CDS,8,7) ne "0000000"
     ;
 quit;
-
-
-* inspect columns of interest in cleaned versions of datasets;
-    /*
-    title "Inspect Percent_Eligible_Free_K12 in frpm1415";
-    proc sql;
-        select
-         min(Percent_Eligible_Free_K12) as min
-        ,max(Percent_Eligible_Free_K12) as max
-        ,mean(Percent_Eligible_Free_K12) as max
-        ,median(Percent_Eligible_Free_K12) as max
-        ,nmiss(Percent_Eligible_Free_K12) as missing
-        from
-        frpm1415
-        ;
-    quit;
-    title;
-
-    title "Inspect Percent_Eligible_Free_K12 in frpm1516";
-    proc sql;
-        select
-         min(Percent_Eligible_Free_K12) as min
-        ,max(Percent_Eligible_Free_K12) as max
-        ,mean(Percent_Eligible_Free_K12) as max
-        ,median(Percent_Eligible_Free_K12) as max
-        ,nmiss(Percent_Eligible_Free_K12) as missing
-        from
-        frpm1516
-        ;
-    quit;
-    title;
-
-    title "Inspect PCTGE1500, after converting to numeric values, in sat15";
-    proc sql;
-        select
-         min(input(PCTGE1500,best12.)) as min
-        ,max(input(PCTGE1500,best12.)) as max
-        ,mean(input(PCTGE1500,best12.)) as max
-        ,median(input(PCTGE1500,best12.)) as max
-        ,nmiss(input(PCTGE1500,best12.)) as missing
-        from
-        sat15
-        ;
-    quit;
-    title;
-
-    title "Inspect NUMTSTTAKR, after converting to numeric values, in sat15";
-    proc sql;
-        select
-         input(NUMTSTTAKR,best12.) as Number_of_testers
-        ,count(*)
-        from
-        sat15
-        group by
-        calculated Number_of_testers
-        ;
-    quit;
-    title;
-
-    title "Inspect TOTAL, after converting to numeric values, in gradaf15";
-    proc sql;
-        select
-         input(TOTAL,best12.) as Number_of_course_completers
-        ,count(*)
-        from
-        gradaf15
-        group by
-        calculated Number_of_course_completers
-        ;
-    quit;
-    title;
-
-
-    * combine sat15 and gradaf15 horizontally using a data-step match-merge;
-    * note: After running the data step and proc sort step below several times
-      and averaging the fullstimer output in the system log, they tend to take
-      about 0.04 seconds of combined "real time" to execute and a maximum of
-      about 1.8 MB of memory (1100 KB for the data step vs. 1800 KB for the
-      proc sort step) on the computer they were tested on;
-    data sat_and_gradaf15_v1;
-        retain
-            CDS_Code
-            School
-            District
-            Number_of_SAT_Takers
-            Number_of_Course_Completers
-        ;
-        keep
-            CDS_Code
-            School
-            District
-            Number_of_SAT_Takers
-            Number_of_Course_Completers
-        ;
-        merge
-            gradaf15
-            sat15(
-                rename=(
-                    CDS=CDS_Code
-                    sname=School
-                    dname=District
-                )
-            )
-        ;
-        by CDS_Code;
-
-        Number_of_SAT_Takers = input(NUMTSTTAKR, best12.);
-
-        Number_of_Course_Completers = input(TOTAL, best12.);
-
-    run;
-    proc sort data=sat_and_gradaf15_v1;
-        by CDS_Code;
-    run;
-
-
-    * combine sat15 and gradaf15 horizontally using proc sql;
-    * note: After running the proc sql step below several times and averaging
-      the fullstimer output in the system log, they tend to take about 0.04
-      seconds of "real time" to execute and about 9 MB of memory on the computer
-      they were tested on. Consequently, the proc sql step appears to take roughly
-      the same amount of time to execute as the combined data step and proc sort
-      steps above, but to use roughly five times as much memory;
-    * note to learners: Based upon these results, the proc sql step is preferable
-      if memory performance isn't critical. This is because less code is required,
-      so it's faster to write and verify correct output has been obtained;
-    proc sql;
-        create table sat_and_gradaf15_v2 as
-            select
-                 coalesce(A.CDS,B.CDS_Code) as CDS_Code
-                ,coalesce(A.sname,B.SCHOOL) as School
-                ,coalesce(A.dname,B.DISTRICT) as District
-                ,input(A.NUMTSTTAKR,best12.) as Number_of_SAT_Takers
-                ,input(B.TOTAL,best12.) as Number_of_Course_Completers
-            from
-                sat15 as A
-                full join
-                gradaf15 as B
-                on A.CDS=B.CDS_Code
-            order by
-                CDS_Code
-        ;
-    quit;
-
-
-    * verify that sat_and_gradaf15_v1 and sat_and_gradaf15_v2 are identical;
-    proc compare
-            base=sat_and_gradaf15_v1
-            compare=sat_and_gradaf15_v2
-            novalues
-        ;
-    run;
-    */
 
 * build analytic dataset from raw datasets imported above, including only the
 columns and minimal data-cleaning/transformation needed to address each
@@ -623,7 +461,7 @@ proc sql;
                      District
                     ,input(NUMTSTTAKR,best12.)
                      AS Number_of_SAT_Takers
-                    ,input(PCTGE1500, best12.)
+                    ,input(PCTGE1500, best12.)/100
                      AS Percent_with_SAT_above_1500
                 from
                     sat15
@@ -640,27 +478,6 @@ to be a primary key;
 * after executing this data step, we see that the full joins used above
 introduced duplicates in cde_analytic_file_raw, which need to be mitigated
 before proceeding;
-/* notes to learners:
-    (1) even though the data-integrity check and mitigation steps below could
-        be performed with SQL queries, as was used earlier in this file, it's
-        often faster and less code to use data steps and proc sort steps to
-        check for and remove duplicates; in particular, by-group processing
-        is much more convenient when checking for duplicates than the SQL row
-        aggregation and in-line view tricks used above; in practice, though,
-        you should use whatever methodology you're most comfortable with
-    (2) when determining what type of join to use to combine tables, it's
-        common to designate one of the table as the "master" table, and to use
-        left (outer) joins to add columns from the other "auxiliary" tables
-    (3) however, if this isn't the case, an inner joins typically makes sense
-        whenever we're only interested in rows whose unique id values match up
-        in the tables to be joined
-    (4) similarly, full (outer) joins tend to make sense whenever we want all
-        possible combinations of all rows with respect to unique id values to
-        be included in the output dataset, such as in this example, where not
-        every dataset will necessarily have every possible of CDS_Code in it
-    (5) unfortunately, though, full joins of more than two tables can also
-        introduce duplicates with respect to unique id values, even if unique
-        id values are not duplicated in the original input datasets 
 */
 data cde_analytic_file_raw_bad_ids;
     set cde_analytic_file_raw;

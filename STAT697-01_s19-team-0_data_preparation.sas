@@ -461,7 +461,7 @@ proc sql;
                      District
                     ,input(NUMTSTTAKR,best12.)
                      AS Number_of_SAT_Takers
-                    ,input(PCTGE1500, best12.)
+                    ,input(PCTGE1500, best12.)/100
                      AS Percent_with_SAT_above_1500
                 from
                     sat15

@@ -107,7 +107,7 @@ footnote2 justify=left
 ;
 
 footnote3 justify=left
-"Possible explanations for this correlation include child-poverty rates tending to be higher at schools with lower overall academic performance and quality of instruction. In addition, students in non-poverish conditions are more likely to have parents able to pay for SAT preparation."
+"Possible explanations for this correlation include child-poverty rates tending to be higher at schools with lower overall academic performance and quality of instruction. In addition, students in non-impoverished conditions are more likely to have parents able to pay for SAT preparation."
 ;
 
 proc corr
@@ -191,7 +191,7 @@ proc sort
     ;
 run;
 
-* output first five rows of resulting sorted data, addressing research question;
+* output first ten rows of resulting sorted data, addressing research question;
 proc report data=cde_analytic_file_by_Gap_Count(obs=10);
     columns
         School

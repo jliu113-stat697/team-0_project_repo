@@ -6,7 +6,8 @@
 * set relative file import path to current directory (using standard SAS trick);
 X "cd ""%substr(%sysget(SAS_EXECFILEPATH),1,%eval(%length(%sysget(SAS_EXECFILEPATH))-%length(%sysget(SAS_EXECFILENAME))))""";
 
-* load external file that will generate final analytic file;
+* load external file generating "analytic file" dataset cde_analytic_file, from
+  which all data analyses below begin;
 %include '.\STAT697-01_s19-team-0_data_preparation.sas';
 
 
@@ -26,6 +27,24 @@ to the column of the same name from frpm1516.
 Limitations: Values of "Percent (%) Eligible Free (K-12)" equal to zero should
 be excluded from this analysis, since they are potentially missing data values 
 ;
+
+proc sql outobs=5;
+    select
+         School
+        ,District
+        ,Percent_Eligible_FRPM_K12_1415
+        ,Percent_Eligible_FRPM_K12_1516
+        ,FRPM_Percentage_Point_Increase
+    from
+        cde_analytic_file
+    where
+        Percent_Eligible_FRPM_K12_1415 > 0
+        and
+        Percent_Eligible_FRPM_K12_1516 > 0
+    order by
+        FRPM_Percentage_Point_Increase desc
+    ;
+quit;
 
 
 *******************************************************************************;
@@ -47,6 +66,40 @@ Limitations: Values of "Percent (%) Eligible Free (K-12)" equal to zero should
 be excluded from this analysis, since they are potentially missing data values,
 and missing values of PCTGE1500 should also be excluded
 ;
+
+proc rank
+        groups=10
+        data=cde_analytic_file
+        out=cde_analytic_file_ranked
+    ;
+    var Percent_Eligible_FRPM_K12_1415;
+    ranks Percent_Eligible_FRPM_K12_rank;
+run;
+proc rank
+        groups=10
+        data=cde_analytic_file_ranked
+        out=cde_analytic_file_ranked
+    ;
+    var Percent_with_SAT_above_1500;
+    ranks Percent_with_SAT_above_1500_rank;
+run;
+
+proc freq data=cde_analytic_file_ranked;
+    table
+          Percent_Eligible_FRPM_K12_rank
+        * Percent_with_SAT_above_1500_rank
+        / norow nocol nopercent
+    ;
+    label
+        Percent_Eligible_FRPM_K12_rank=" "
+        Percent_with_SAT_above_1500_rank=" "
+    ;
+    where
+        not(missing(Percent_Eligible_FRPM_K12_1415))
+        and
+        not(missing(Percent_with_SAT_above_1500))
+    ;
+run;
 
 
 *******************************************************************************;
@@ -75,17 +128,15 @@ proc sql outobs=10;
         ,District
         ,Number_of_SAT_Takers /* NUMTSTTAKR from sat15 */
         ,Number_of_Course_Completers /* TOTAL from gradaf15 */
-        ,Number_of_SAT_Takers - Number_of_Course_Completers
-         AS Difference
-        ,(calculated Difference)/Number_of_Course_Completers
-         AS Percent_Difference format percent12.1
+        ,Course_Completers_Gap_Count
+        ,Course_Completers_Gap_Percent format percent12.1
     from
-        sat_and_gradaf15_v2
+        cde_analytic_file
     where
         Number_of_SAT_Takers > 0
         and
         Number_of_Course_Completers > 0
     order by
-        Difference desc
+        Course_Completers_Gap_Count desc
     ;
 quit;
